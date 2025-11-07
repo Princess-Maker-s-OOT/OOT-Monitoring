@@ -1,0 +1,7 @@
+name: ci-monitoring.yml
+
+on:
+  pull_request:
+    branches: [ staging ]
+
+jobs:

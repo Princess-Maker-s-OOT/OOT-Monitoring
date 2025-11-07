@@ -1,0 +1,7 @@
+name: cd_monitoring.yml
+
+on:
+  push:
+    branches: [ staging ]
+
+jobs:
