@@ -3,12 +3,6 @@ name: CD Monitoring Stack
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - "docker-compose.yml"
-      - "loki/**"
-      - "grafana/**"
-      - "promtail/**"
-      - "scripts/**"
 
   # 수동 실행 옵션 추가
   workflow_dispatch:
