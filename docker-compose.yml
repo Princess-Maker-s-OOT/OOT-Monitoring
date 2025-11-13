@@ -1,1 +1,80 @@
+version: '3.8'
+
+networks:
+  monitoring-net:
+    driver: bridge
+
 services:
+  # 1. 로그 저장소 (Loki)
+  loki:
+    image: grafana/loki:3.5.8
+    container_name: loki
+    ports:
+      # 개발 서버의 Promtail이 이 서버로 로그 전송 시 필요
+      - "3100:3100"
+      - "9096:9096"  # gRPC port
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yml
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - monitoring-net
+
+  # 2. 로그 수집기 (Promtail)
+  promtail:
+    image: grafana/promtail:3.5.8
+    container_name: promtail
+    user: root  # Docker 소켓 접근을 위해 필요
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker 로그 수집
+      - /tmp:/tmp  # positions 파일 쓸 디렉토리
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - monitoring-net
+
+  # 3. 시각화 대시보드 (Grafana)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-monitor
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana  # 데이터 영속성
+    environment:
+      # 보안 설정 (환경변수 사용)
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      # 기본 설정
+      - GF_INSTALL_PLUGINS=
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_LOG_MODE=console
+      - GF_LOG_LEVEL=info
+      # 익명 접근 비활성화
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - monitoring-net
+
+volumes:
+  loki_data:
+    driver: local
+  grafana_data:
+    driver: local
