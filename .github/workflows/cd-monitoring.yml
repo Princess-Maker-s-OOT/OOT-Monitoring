@@ -38,7 +38,7 @@ jobs:
             echo "=========================================="
 
             # 프로젝트 디렉토리 설정
-            PROJECT_DIR="/home/${{ secrets.SSH_USERNAME }}/monitoring"
+            PROJECT_DIR="/home/${{ secrets.SSH_USERNAME }}/OOT-Monitoring"
 
             # 프로젝트 디렉토리 존재 확인
             if [ ! -d "$PROJECT_DIR" ]; then
