@@ -1,0 +1,127 @@
+name: CD Monitoring Stack
+
+# ============================================================
+# GitHub Actions 워크플로우: 모니터링 서버 자동 배포
+# ============================================================
+# Triggers: main 브랜치에 모니터링 관련 파일이 push될 때 실행
+#
+# 필요한 GitHub Secrets 설정:
+#   - SERVER_IP: 모니터링 서버 EC2 인스턴스 IP 주소
+#   - SSH_USERNAME: SSH 접속 사용자명 (예: ubuntu, ec2-user)
+#   - SSH_PRIVATE_KEY: SSH 개인키 전체 내용 (PEM 파일)
+#
+# 사전 준비사항 (EC2 서버):
+#   1. Git 설치: sudo apt install git
+#   2. Docker & Docker Compose 설치
+#   3. 저장소 클론: git clone <repo-url> ~/monitoring
+#   4. .env 파일 생성 및 비밀번호 설정
+# ============================================================
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "docker-compose.yml"
+      - "loki/**"
+      - "grafana/**"
+      - "promtail/**"
+      - "scripts/**"
+
+  # 수동 실행 옵션 추가
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 저장소 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. SSH로 모니터링 서버 접속 및 배포
+      - name: Deploy to Monitoring Server via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 5m  # 배포 작업이 길 수 있으므로 timeout 연장
+          script: |
+            set -e  # 에러 발생 시 즉시 중단
+
+            echo "=========================================="
+            echo "🚀 Starting Monitoring Stack Deployment"
+            echo "=========================================="
+
+            # 프로젝트 디렉토리 설정
+            PROJECT_DIR="/home/${{ secrets.SSH_USERNAME }}/monitoring"
+
+            # 프로젝트 디렉토리 존재 확인
+            if [ ! -d "$PROJECT_DIR" ]; then
+              echo "❌ Error: Project directory not found: $PROJECT_DIR"
+              echo ""
+              echo "Please clone the repository first:"
+              echo "  cd ~"
+              echo "  git clone <repository-url> monitoring"
+              exit 1
+            fi
+
+            cd "$PROJECT_DIR"
+            echo "📂 Working directory: $(pwd)"
+
+            # Git 저장소 업데이트
+            echo ""
+            echo "📥 Pulling latest changes from main branch..."
+            git fetch origin
+            git reset --hard origin/main  # 로컬 변경사항 무시하고 강제 업데이트
+
+            # .env 파일 확인 (필수)
+            if [ ! -f ".env" ]; then
+              echo ""
+              echo "❌ Error: .env file not found in $PROJECT_DIR"
+              echo ""
+              echo "Please create .env file on EC2 server first:"
+              echo "  cd $PROJECT_DIR"
+              echo "  cat > .env << 'EOF'"
+              echo "GRAFANA_ADMIN_USER=admin"
+              echo "GRAFANA_ADMIN_PASSWORD=YourStrongPassword"
+              echo "GRAFANA_PORT=3000"
+              echo "EOF"
+              echo ""
+              exit 1
+            else
+              echo "✅ .env file exists"
+            fi
+
+            # Docker 설치 확인
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Error: Docker is not installed!"
+              echo "Please install Docker first."
+              exit 1
+            fi
+
+            # 배포 스크립트 실행 권한 확인
+            chmod +x scripts/deploy-monitoring.sh
+
+            # 배포 스크립트 실행
+            echo ""
+            echo "🔧 Running deployment script..."
+            bash scripts/deploy-monitoring.sh
+
+            # 배포 완료 메시지
+            echo ""
+            echo "=========================================="
+            echo "✅ Deployment Completed Successfully!"
+            echo "=========================================="
+            echo ""
+            echo "📊 Grafana Dashboard: http://${{ secrets.SERVER_IP }}:3000"
+            echo "   Default login: admin / admin"
+            echo ""
+            echo "🔍 Loki API: http://${{ secrets.SERVER_IP }}:3100"
+            echo ""
+            echo "💡 Useful commands:"
+            echo "   Check status:  docker compose ps"
+            echo "   View logs:     docker compose logs -f"
+            echo "   Restart:       docker compose restart"
+            echo "   Stop:          docker compose down"
