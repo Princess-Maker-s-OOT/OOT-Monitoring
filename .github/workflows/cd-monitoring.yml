@@ -1,22 +1,5 @@
 name: CD Monitoring Stack
 
-# ============================================================
-# GitHub Actions 워크플로우: 모니터링 서버 자동 배포
-# ============================================================
-# Triggers: main 브랜치에 모니터링 관련 파일이 push될 때 실행
-#
-# 필요한 GitHub Secrets 설정:
-#   - SERVER_IP: 모니터링 서버 EC2 인스턴스 IP 주소
-#   - SSH_USERNAME: SSH 접속 사용자명 (예: ubuntu, ec2-user)
-#   - SSH_PRIVATE_KEY: SSH 개인키 전체 내용 (PEM 파일)
-#
-# 사전 준비사항 (EC2 서버):
-#   1. Git 설치: sudo apt install git
-#   2. Docker & Docker Compose 설치
-#   3. 저장소 클론: git clone <repo-url> ~/monitoring
-#   4. .env 파일 생성 및 비밀번호 설정
-# ============================================================
-
 on:
   push:
     branches: [ "main" ]
