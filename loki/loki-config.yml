@@ -1,5 +1,5 @@
 auth_enabled: false
-
+# 추가
 server:
   http_listen_port: 3100
   grpc_listen_port: 9096
