@@ -1,2 +1,37 @@
-### iml ###
-OOT-Monitoring.iml
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.iws
+*.ipr
+
+### 환경변수 파일 ###
+.env
+.env.example
+.env.local
+.env.*.local
+
+### Docker 볼륨 데이터 (로컬 테스트 시 생성됨) ###
+# Docker Compose가 생성하는 볼륨은 자동 관리되므로 제외
+# 만약 호스트 경로를 직접 마운트하는 경우 해당 경로 추가
+
+### Promtail positions 파일 ###
+positions.yaml
+
+### 로그 파일 ###
+*.log
+logs/
+
+### 임시 파일 ###
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+### OS 관련 ###
+.DS_Store
+Thumbs.db
+
+### 백업 파일 ###
+*.bak
+*.backup
