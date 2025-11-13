@@ -1,0 +1,81 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+# 쿼리 및 수집 제한
+limits_config:
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h  # 7일
+  retention_period: 168h            # 7일 로그 보관
+  max_query_length: 721h            # 30일
+  ingestion_rate_mb: 16             # MB/s per tenant
+  ingestion_burst_size_mb: 32
+  per_stream_rate_limit: 8MB
+  per_stream_rate_limit_burst: 16MB
+
+# 공통 설정
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+# 최신 TSDB 기반 스키마 (Loki 3.x 권장)
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+# 저장소 설정
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
+  filesystem:
+    directory: /loki/chunks
+
+# 압축 및 보관 정책
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 50
+  delete_request_store: filesystem
+  compaction_interval: 10m
+
+# 인덱스 게이트웨이 (TSDB 사용 시 권장)
+index_gateway:
+  mode: simple
+
+# Write-Ahead Log 설정
+ingester:
+  wal:
+    enabled: true
+    dir: /loki/wal
+    flush_on_shutdown: true
+  chunk_encoding: snappy
+  lifecycler:
+    ring:
+      replication_factor: 1
+
+# 쿼리 성능 최적화
+query_range:
+  align_queries_with_step: true
+  cache_results: true
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
